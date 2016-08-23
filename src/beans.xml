@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>  
+<beans xmlns="http://www.springframework.org/schema/beans"  
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+    xmlns:context="http://www.springframework.org/schema/context"  
+    xmlns:aop="http://www.springframework.org/schema/aop"  
+    xmlns:tx="http://www.springframework.org/schema/tx"  
+    xsi:schemaLocation="http://www.springframework.org/schema/beans  
+           http://www.springframework.org/schema/beans/spring-beans-4.2.xsd  
+           http://www.springframework.org/schema/context  
+           http://www.springframework.org/schema/context/spring-context.xsd  
+           http://www.springframework.org/schema/aop  
+           http://www.springframework.org/schema/aop/spring-aop-4.2.xsd  
+           http://www.springframework.org/schema/tx   
+           http://www.springframework.org/schema/tx/spring-tx.xsd">  
+    <context:annotation-config />  
+    <context:component-scan base-package="com.lan" />  
+  <bean id="date" class="java.util.Date"/>
+  <!--com.mchange.v2.c3po.ComboPooledDateSource类在c3p0-0.9.5.1.jar中-->
+  <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+  	<property name="driverClass" value="oracle.jdbc.driver.OracleDriver"/>
+  	<property name="jdbcUrl" value="jdbc:oracle:thin:@localhost:1521:orcl"/>
+  	<property name="user" value="ube0801"/>
+  	<property name="password" value="1"/>
+  </bean>
+  <!-- 类位于org.springframework.orm.hibernate4包里 -->
+  <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+  	<property name="dataSource" ref="dataSource"/>
+  	<property name="configLocation" value="classpath:hibernate.cfg.xml"/>
+  </bean>
+  <!-- 事务管理 用来管理sessionFactory，由sessionFactory生产的session将会有声明式事务管理 -->
+  <bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+  	<property name="sessionFactory" ref="sessionFactory"/>
+  </bean>
+  <!--配置advice通知 指定哪些方法需要使用什么类型的事务模型-->
+  <tx:advice id="advice" transaction-manager="transactionManager">
+  	<tx:attributes>
+  		<!-- REQUIRED表示如果存在事务，则支持当前事务，如果没有创建新的事务 -->
+  		<tx:method name="save*" propagation="REQUIRED"/>
+  		<tx:method name="update*" propagation="REQUIRED"/>
+  		<tx:method name="delete*" propagation="REQUIRED"/>
+  		<!-- SUPPORTS表示如果存在事务就支持当前事务，不存在就算了 -->
+  		<tx:method name="*" propagation="SUPPORTS"/>
+  	</tx:attributes>
+  </tx:advice>
+  <aop:config>
+  	<!-- aop:advice将通知和切面结合起来，我们直接使用上面配置好的advice和pointcut，将其引入进来即可。-->
+  	<!-- 这样配置好了后，意思就是说，凡是cn.it.shop.service.impl包下的方法都需要切入事务管理。-->
+  	<!--具体地，以save、update、delete开头的方法使用REQUIED方式，其他方法使用SUPPORTS方式。-->
+  	<!-- pointcut要写在aop:advisor上面 否则报错 -->
+  	<aop:pointcut id="pointcut" expression="execution(* com.sshube.it.service.impl.*.*(..) )"/>
+  	<aop:advisor advice-ref="advice" pointcut-ref="pointcut"/>
+  </aop:config>
+  <bean id="userADUService" class="com.sshube.it.service.impl.UserADUImpl">
+  	<property name="sessionFactory" ref="sessionFactory"/> 
+  </bean>
+  <bean id="registerAction" class="com.sshube.user.action.UserRegisterAction" scope="prototype"> 
+ 	<property name="userservice" ref="userADUService" /> <!-- 依赖的categoryService用上面和Hibernate整合时配置好的categoryService -->
+  	<property name="user" ref="uservo"/>
+  </bean>
+  <bean id="uservo" class="com.sshube.spring.bean.User">
+  	<property name="username" value="2"/>
+  	<property name="password" value="123456a"/>
+  	<property name="id" value="2"/>
+  </bean>
+</beans>  
